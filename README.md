@@ -1,6 +1,6 @@
 # go-microservices:snowflake:
 
-A template for go microservices that with authentication, logging, and mailing.
+A template for go microservices with authentication, logging, and mailing.
 
 ## Includes configurations for:
 - [x] PostgreSQL
