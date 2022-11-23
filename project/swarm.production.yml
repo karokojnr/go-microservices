@@ -1,0 +1,121 @@
+version: "3"
+
+services:
+  caddy:
+    image: karokojnr/micro-caddy-production:1.0.1
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == node-1
+
+    ports:
+      - "80:80"
+      - "443:443"
+
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+  front-end:
+    image: karokojnr/front-end:1.0.4
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      BROKER_URL: "https://broker.karokojnr.com"
+
+  broker-service:
+    image: karokojnr/broker-service:1.0.1
+    deploy:
+      mode: replicated
+      replicas: 1
+
+  listener-service:
+    image: karokojnr/listener-service:1.0.0
+    deploy:
+      mode: replicated
+      replicas: 1
+
+  authentication-service:
+    image: karokojnr/authentication-service:1.0.1
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      DSN: "host=postgres port=5432 user=postgres password=karokojnr dbname=users sslmode=disable timezone=UTC connect_timeout=5"
+
+  logger-service:
+    image: karokojnr/logger-service:1.0.1
+    deploy:
+      mode: replicated
+      replicas: 1
+
+  mailer-service:
+    image: karokojnr/mail-service:1.0.0
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      MAIL_DOMAIN: localhost
+      MAIL_HOST: mailhog
+      MAIL_PORT: 1025
+      MAIL_ENCRYPTION: none
+      MAIL_USERNAME: ""
+      MAIL_PASSWORD: ""
+      FROM_NAME: "Karoko Jnr"
+      FROM_ADDRESS: karoko@jnr.com
+
+  rabbitmq:
+    image: "rabbitmq:3.9-alpine"
+    deploy:
+      mode: replicated # global # keep one instance of this service running on every node of the swarm
+      replicas: 1
+
+  mailhog:
+    image: "mailhog/mailhog:latest"
+    ports:
+      - "8025:8025"
+    deploy:
+      mode: replicated # global # keep one instance of this service running on every node of the swarm
+      replicas: 1
+
+  mongo:
+    image: "mongo:4.2.17-bionic"
+    ports:
+      - "27017:27017"
+    deploy:
+      mode: replicated # global # keep one instance of this service running on every node of the swarm
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == node-1
+    environment:
+      MONGO_INITDB_DATABASE: logs
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - ./db-data/mongo/:/data/db
+
+  postgres:
+    image: "postgres:14.2"
+    ports:
+      - "5432:5432"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == node-1
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: karokojnr
+      POSTGRES_DB: users
+    volumes:
+      - ./db-data/postgres/:/var/lib/postgresql/data/
+
+volumes:
+  caddy_data:
+    external: true
+  caddy_config:
